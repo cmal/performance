@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    <title>performance2 -- react</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/javascript">
+      function randomHexColor(){
+        return "#" + ("0000"+ (Math.random() * 0x1000000 << 0).toString(16)).substr(-6);
+      }
+
+      function guid() {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+	  var r = Math.random() * 16 | 0,
+	      v = c == 'x' ? r : (r & 0x3 | 0x8);
+	  return v.toString(16);
+	});
+      }
+      var uid = guid().split('-')[0]
+      const callbacks = {}
+      const callback = (entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting || entry.intersectionRatio > 0.01) {
+            const cb = callbacks[entry.target.dataset[uid]];
+            if (cb) {
+              cb();
+            }
+          }
+        })
+      }
+      var options = {}
+      const ob = new IntersectionObserver(callback, options);
+
+      const registerCb = (id, cb) => {
+        callbacks[id] = cb
+      }
+
+      function demo1() {
+        setTimeout(function() {
+          var k = 0;
+          var root = document.getElementById("root");
+          for(var i = 0; i < 10000; i++) { // 插入10000个
+            k += +new Date();
+            var el = document.createElement("div");
+            el.innerHTML = k;
+            root.appendChild(el);
+            el.style.cssText = `background:${randomHexColor()};height:40px`;
+          }
+        }, 1000);
+      }
+      function demo2() {
+        var root = document.getElementById("root");
+        setTimeout(() => {
+          const loop = (n) => {
+            var k = 0;
+            for (var i = 0; i < 100; i++) {
+              k += +new Date();
+              var el = document.createElement("div");
+              el.innerHTML = k;
+              root.appendChild(el);
+              const color = randomHexColor();
+              el.style.cssText = `background:${color};height:40px`;
+              const index = n * 100 + i;
+              registerCb(index, () => {
+                console.log(index);
+              });
+              el.dataset[uid] = index;
+              ob.observe(el);
+            }
+            if (n) {
+              setTimeout(() => {
+                loop(n - 1);
+              }, 40);
+            }
+          }
+          loop(100); // 分批插入，每次100，总数还是10000
+        }, 1000);
+      }
+      demo2();
+    </script>
+  </body>
+</html>
